@@ -30,6 +30,7 @@ import networkx as nx
 from pyvis.network import Network
 import community
 from community import community_louvain
+import streamlit.components.v1 as components
 
 def main():
     """Semi Automated ML App with Streamlit """
@@ -257,8 +258,6 @@ def main():
      
             st.title("Visualization Network Graph")
             
-            button = st.button("Click to show more details of %s network graph" % brand_choice) 
-            st.write("")
             
             G.add_nodes_from(node_names)
             G.add_edges_from(edges)
@@ -268,14 +267,18 @@ def main():
 
             st.pyplot()
             
-            nt = Network("800px", "1500px")
-            nt.from_nx(subgraph)
+            #nt = Network("800px", "1500px")
+            #nt.from_nx(subgraph)
+            st.title("Interactive Visualization Network Graph")
+            st.write("Please drag and scroll the graph with the mouse to show more detailed information")
+            net_graph = "%s_network_graph.html" % brand_choice
+            #st.write(net_graph)
+            #components.iframe(net_graph, width= 800, height=800)
+            HtmlFile = open(net_graph, 'r', encoding='utf-8')
+            source_code = HtmlFile.read() 
+            components.html(source_code, height=1000, width=650)
 
-              
            
-            if button:
-                nt.show("network_graph.html")
-    
                     
 if __name__=='__main__':
     main()
