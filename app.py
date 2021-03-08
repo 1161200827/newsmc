@@ -12,7 +12,6 @@ matplotlib.use("Agg")
 import seaborn as sns 
 import pickle
 import dill
-
 from PIL import Image
 dill.dumps('foo')
 import joblib
@@ -27,410 +26,256 @@ from PIL import Image
 from SPARQLWrapper import SPARQLWrapper
 from streamlit_agraph import agraph, TripleStore, Config
 st.set_option('deprecation.showPyplotGlobalUse', False)
-
-from sklearn.metrics import accuracy_score,f1_score, precision_score, recall_score, confusion_matrix, roc_curve, roc_auc_score, silhouette_samples, silhouette_score
+import networkx as nx
+from pyvis.network import Network
+import community
+from community import community_louvain
 
 def main():
     """Semi Automated ML App with Streamlit """
-    activities = ["Matrics Monitored","Data Visualization"]  
-    
-    choice = st.sidebar.selectbox("Select Activities",activities)
+    activities = ["Matrics Monitored","Data Visualization", "About Us"]  
 
+    choice = st.sidebar.selectbox("Select Activities", activities)
+    companyCol = ["blue","orange","green","red"]
     
+    if choice == 'About Us':
+       st.title('Social Media Computing Project Members')
+       about = pd.read_csv('aboutus.csv')
+       st.table(about)
+        
     if choice == 'Matrics Monitored':
         
         st.title("Social Media Computing Assignment")
-       
+        st.write("In the project, we have decided to run an analysis on four different competing companies which are OMEGA (@omegawatches), ROLEX (@ROLEX), Daniel Wellington (@itisDW), and Swatch US (@SwatchUS) through Twitter API.")
+        st.write("Based on the data crawled through the Twitter API in February 2021, several metrics can be used to monitor the best campaigns for all brands. As a result, Daniel wellington success run a campaign #danielwellington which the engagement rate is higher among the competitor.")
+        
+        image = Image.open('logo.jpeg')
+        new_image = image.resize((600, 150))
+        st.image(new_image)
+        
+
+        
+        social = pd.read_csv('social_media.csv')
+        fig = px.bar(social, x="domain", y="value", color="type", title="Social Media Platform Analysis")
+        st.plotly_chart(fig)
+        
         df = pd.read_csv('audience_size.csv')
-       # df
+        #df
         fig = px.bar(df, x="company", y="count", color="type", title="Audience Size")
         st.plotly_chart(fig)
         
+        animals=['OMEGAOfficialTimekeeper@OMEGA', 'perpetual@ROLEX',
+            'danielwellington@ITISDW','swatchmytime@SWATCH']
+            
+        fig = go.Figure([go.Bar(x = animals, y = [0.2139, 0.0914, 7.7447, 0.0377])])
+        st.subheader("Best campaign across all the brands")
+        st.plotly_chart(fig)
+        
+        social = pd.read_csv('camp_categories.csv')
+        fig = px.bar(social, x="domain", y="engagement_rate", color="campaign", title="Campaign")
+        st.plotly_chart(fig)
         
     if choice == 'Data Visualization':   
         
-        activities = ["Audience Country Spread","Campaign Categories","Favourite And Retweet Count", "Frequency Tweets","Word Map","Network Graph"]  
+        activities = ["Audience Country Spread","Engagement Rate","Campaign Categories","Favourite And Retweet Count","Word Cloud","Network Graph"]  
         choice = st.sidebar.selectbox("Select Activities",activities)
     
         if choice == 'Audience Country Spread':
             st.title("Audience Country Spread") 
-            brand = ["Omega","Rolex","Daniel Wellington", "SwatchUS"]
-            brand_choice = st.sidebar.selectbox("Select Brand",brand)
-            if brand_choice == 'Omega':
             
-                omega_loc = pd.read_csv('omega_loc.csv')
-                omega_country = px.bar(omega_loc,x='Followers(%)',y='Country',
-                title='Omega - Audience country spread',
+            loc_data = ["omega_loc", "rolex_loc", "itisdw_loc", "swatch_loc"]
+            comp_name = ["OMEGA", "ROLEX", "ITISDW", "SWATCH"]
+          
+            for k in range(4):
+                loc_set = pd.read_csv("%s.csv" % loc_data[k])
+                loc_chart = px.bar(loc_set,x='Followers(%)',y='Country',
+                title="%s Favourite Audience country spread" % comp_name[k],
                 text='Followers(%)',
-                orientation='h')
-                st.plotly_chart(omega_country)
-         
-            if brand_choice == 'Rolex':
-            
-                rolex_loc = pd.read_csv('rolex_loc.csv')
-                rolex_country = px.bar(rolex_loc,x='Followers(%)',y='Country',
-                title='Rolex - Audience country spread',
-                text='Followers(%)',
-                orientation='h')
-                st.plotly_chart(rolex_country)
-        
-            if brand_choice == 'Daniel Wellington':
-            
-                DanielWellington_loc = pd.read_csv('itisdw_loc.csv')
-                DanielWellington_country = px.bar(DanielWellington_loc,x='Followers(%)',y='Country',
-                title='Daniel Wellington - Audience country spread',
-                text='Followers(%)',
-                orientation='h')
-                st.plotly_chart(DanielWellington_country)
-            
-            if brand_choice == 'SwatchUS':
-            
-                swatch_loc = pd.read_csv('swatch_loc.csv')
-                swatch_country = px.bar(swatch_loc,x='Followers(%)',y='Country',
-                title='SwatchUS - Audience country spread',
-                text='Followers(%)',
-                orientation='h')
-                st.plotly_chart(swatch_country)
-            
-            
-  
-
-        
+                color_continuous_scale=px.colors.sequential.Sunset,
+                color='Country',
+                orientation='h'
+                )
+              
+                st.plotly_chart(loc_chart)
+                    
         if choice == 'Campaign Categories':
             
-            st.title("Campaign Categories")   
-      
-            brand = ["Omega","Rolex","Daniel Wellington", "SwatchUS"]
-            brand_choice = st.sidebar.selectbox("Select Brand",brand)
-            if brand_choice == 'Omega':
+            st.title("Campaign Categories") 
             
-                company = "omega"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
+            
+            camp_cate_opt = ["Total Campaign Engagement Rate","Total Tweeted Campaign","Average Campaign Engagement"]
+            camp_cate = st.selectbox("Select Campaign", camp_cate_opt) 
+            companyName = ["omega","rolex","itisdw","swatch"]
+
+            if camp_cate == 'Total Campaign Engagement Rate':
+                for k in range(4):
+                    companyChoose = companyName[k]
+                    camp_eng = pd.read_csv('campaign_engagement.csv').query('company == @companyChoose')
+                    fig = px.bar(camp_eng, x="campaign", y="rate", title=companyChoose)
+                    fig.update_traces(marker_color=companyCol[k])
+                    st.plotly_chart(fig)
                 
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
                 
-            if brand_choice == 'Rolex':
-            
-                company = "rolex"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
-        
-            if brand_choice == 'Daniel Wellington':
-            
-                company = "itisdw"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
-            
-            if brand_choice == 'SwatchUS':
-            
-                company = "swatch"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
+            if camp_cate == 'Total Tweeted Campaign':
+                for k in range(4):
+                    companyChoose = companyName[k]
+                    camp_eng = pd.read_csv('campaign_engagement.csv').query('company == @companyChoose')
+                    fig = px.bar(camp_eng, x="campaign", y="count", title=companyChoose)
+                    fig.update_traces(marker_color=companyCol[k])
+                    st.plotly_chart(fig)
+               
+            if camp_cate == 'Average Campaign Engagement':
+                for k in range(4):
+                    companyChoose = companyName[k]
+                    camp_eng = pd.read_csv('campaign_engagement.csv').query('company == @companyChoose')
+                    fig = px.bar(camp_eng, x="campaign", y="rate", title=companyChoose)
+                    fig.update_traces(marker_color=companyCol[k])
+                    st.plotly_chart(fig)
 
-        if choice == 'Favourite And Retweet Count':
-    
+        if choice == 'Engagement Rate':
 
-            st.title("Favourite Count")   
-      
-            omega_camp = pd.read_csv('omega_camp.csv')
-            omega_camp = px.bar(omega_camp,x='campaign',y='likes_sum',
-            title='Omega Favourite Count')
-            st.plotly_chart(omega_camp)
-       
-            rolex_camp = pd.read_csv('rolex_camp.csv')
-            rolex_camp = px.bar(rolex_camp,x='campaign',y='likes_sum',
-            title='Rolex Favourite Count')
-            st.plotly_chart(rolex_camp)
+            st.title("Engagement Rate")
+            eng_rate_opt = ["ALL","omega","rolex","itisdw", "swatch"]
+            eng_rate_val = st.selectbox("Select Brand", eng_rate_opt)
             
-            itisdw_camp = pd.read_csv('itisdw_camp.csv')
-            itisdw_camp = px.bar(itisdw_camp,x='campaign',y='likes_sum',
-            title='Daniel Wellington Favourite Count')
-            st.plotly_chart(itisdw_camp)
-        
-       
-            swatch_camp = pd.read_csv('swatch_camp.csv')
-            swatch_camp = px.bar(swatch_camp,x='campaign',y='likes_sum',
-            title='SwatchUS Favourite Count')
-            st.plotly_chart(swatch_camp)
- 
-            st.title("Retweet Count")
-        
-            omega_camp = pd.read_csv('omega_camp.csv')
-            omega_camp = px.bar(omega_camp,x='campaign',y='retweet_sum',
-            title='Omega Retweet Count')
-            st.plotly_chart(omega_camp)
-          
-            rolex_camp = pd.read_csv('rolex_camp.csv')
-            rolex_camp = px.bar(rolex_camp,x='campaign',y='retweet_sum',
-            title='Rolex Retweet Count')
-            st.plotly_chart(rolex_camp)
-         
-            itisdw_camp = pd.read_csv('itisdw_camp.csv')
-            itisdw_camp = px.bar(itisdw_camp,x='campaign',y='retweet_sum',
-            title='Daniel Wellington Retweet Count')
-            st.plotly_chart(itisdw_camp)
-        
-            swatch_camp = pd.read_csv('swatch_camp.csv')
-            swatch_camp = px.bar(swatch_camp,x='campaign',y='retweet_sum',
-            title='SwatchUS Retweet Count')
-            st.plotly_chart(swatch_camp)
-    
-        if choice == 'Frequency Tweets':  
-        
-            st.title("Frequency Tweet")   
-      
-            brand = ["All","Omega","Rolex","Daniel Wellington", "SwatchUS"]
-            brand_choice = st.sidebar.selectbox("Select Brand",brand)
-            
-            if brand_choice == 'Omega':
-            
-                company = "omega"      
-                tweet_freq = pd.read_csv('tweet_freq.csv')                
-                tweet_freq = tweet_freq.query('company == @company')
-                fig = px.line(tweet_freq, x="week", y="count", title="Tweet Frequency")
-                st.plotly_chart(fig)
 
-                company = "omega" 
-                eng_freq = pd.read_csv('engagement_rate.csv')
-                eng_freq = eng_freq.query('company == @company')
-                fig = px.line(eng_freq, x="week", y="count", title="Engagement rate")
-                st.plotly_chart(fig)
-                
-            if brand_choice == 'Rolex':
-            
-                company = "rolex"      
-                tweet_freq = pd.read_csv('tweet_freq.csv')                
-                tweet_freq = tweet_freq.query('company == @company')
-                fig = px.line(tweet_freq, x="week", y="count", title="Tweet Frequency")
-                st.plotly_chart(fig)
-
-                company = "rolex" 
-                eng_freq = pd.read_csv('engagement_rate.csv')
-                eng_freq = eng_freq.query('company == @company')
-                fig = px.line(eng_freq, x="week", y="count", title="Engagement rate")
-                st.plotly_chart(fig)
-        
-            if brand_choice == 'Daniel Wellington':
-            
-                company = "itisdw"      
-                tweet_freq = pd.read_csv('tweet_freq.csv')                
-                tweet_freq = tweet_freq.query('company == @company')
-                fig = px.line(tweet_freq, x="week", y="count", title="Tweet Frequency")
-                st.plotly_chart(fig)
-
-                company = "itisdw" 
-                eng_freq = pd.read_csv('engagement_rate.csv')
-                eng_freq = eng_freq.query('company == @company')
-                fig = px.line(eng_freq, x="week", y="count", title="Engagement rate")
-                st.plotly_chart(fig)
-            
-            if brand_choice == 'SwatchUS':
-            
-                company = "swatch"      
-                tweet_freq = pd.read_csv('tweet_freq.csv')                
-                tweet_freq = tweet_freq.query('company == @company')
-                fig = px.line(tweet_freq, x="week", y="count", title="Tweet Frequency")
-                st.plotly_chart(fig)
-
-                company = "swatch" 
-                eng_freq = pd.read_csv('engagement_rate.csv')
-                eng_freq = eng_freq.query('company == @company')
-                fig = px.line(eng_freq, x="week", y="count", title="Engagement rate")
-                st.plotly_chart(fig)
-        
-            if brand_choice == 'All':
-                tweet_freq = pd.read_csv('tweet_freq.csv')
-                fig = px.line(tweet_freq, x="week", y="count", color='company', title="Tweet Frequency")
-                st.plotly_chart(fig)
-
+            if eng_rate_val == 'ALL':
                 eng_freq = pd.read_csv('engagement_rate.csv')
                 fig = px.line(eng_freq, x="week", y="count", color='company', title="Engagement rate")
                 st.plotly_chart(fig)
                 
-        if choice == 'Word Map':  
+                tweet_freq = pd.read_csv('tweet_freq.csv')
+                fig = px.line(tweet_freq, x="week", y="count", color='company', title="Tweet Frequency")
+                st.plotly_chart(fig)
+                
+            else:
+                eng_freq = pd.read_csv('engagement_rate.csv')
+                eng_freq = eng_freq.query('company == @eng_rate_val')
+                fig = px.line(eng_freq, x="week", y="count", 
+                   title="%s Engagement Rate" % eng_rate_val)
+                st.plotly_chart(fig)
+
+                tweet_freq = pd.read_csv('tweet_freq.csv')                
+                tweet_freq = tweet_freq.query('company == @eng_rate_val')
+                fig = px.line(tweet_freq, x="week", y="count", 
+                   title="%s Frequency Tweet" % eng_rate_val)
+                st.plotly_chart(fig)
+                
+        if choice == 'Favourite And Retweet Count':
+
+            st.title("Favourite And Retweet Count")   
+      
+            fav_opt = ["Favourite", "Retweet"]  
+            fav_selc = st.selectbox("Select Activities", fav_opt)
+            
+            fav_data = ["omega_camp", "rolex_camp", "itisdw_camp", "swatch_camp"]
+            comp_name = ["OMEGA", "ROLEX", "ITISDW", "SWATCH"]
+             
+            if fav_selc == 'Favourite':
+                for i in range(4):
+                    data = px.bar(pd.read_csv("%s.csv" % fav_data[i]),x='campaign',y='likes_sum',
+                        title="%s Favourite Count" % comp_name[i])
+                    st.plotly_chart(data)
+       
+            if fav_selc == 'Retweet':
+                for i in range(4):
+                    data = px.bar(pd.read_csv("%s.csv" % fav_data[i]),x='campaign',y='retweet_sum',
+                        title="%s Retweet Count" % comp_name[i])
+                    st.plotly_chart(data)
+
+        if choice == 'Word Cloud':  
         
             image_mask = np.array(Image.open("watch.jpg"))
             word_cloud = pd.read_csv('word_cloud.csv')
         
-            st.title("Word Map")         
-            brand = ["Omega","Rolex","Daniel Wellington", "SwatchUS"]
-            brand_choice = st.sidebar.selectbox("Select Brand",brand)
+            st.title("Word Cloud")         
+            brand = ["omega","rolex","itisdw", "swatch"]
+            brand_choice = st.selectbox("Select Brand", brand)
             
             word = word_cloud.query('(company == @brand_choice)')
             camp = word.campaign.to_numpy()
             
+            if brand_choice == 'omega':
+                camp_opt = ['all','DeVille','ValentinesDay','OMEGAOfficialTimekeeper']
+                
+            if brand_choice == 'rolex':
+                camp_opt = ['all','perpetual','reloxfamily']
+                
+            if brand_choice == 'itisdw':
+                camp_opt = ['all','dwgiftsoflove','danielwellington','layzhang']
+                
+            if brand_choice == 'swatch':
+                camp_opt = ['all','timeiswhatyoumakeofit','swatchwithlove','swatchmytime']
             
+            camp_choice = st.selectbox("Select Campaign", camp_opt)
+            word = word_cloud.query('(company == @brand) & (campaign == @camp_choice)')['word'].values[0]
 
+            # generate word cloud
+            wc = WordCloud(background_color="white", max_words=2000, mask=image_mask)
+            wc.generate(word)
 
-            if brand_choice == 'Omega':
-            
-                camp = ['all','DeVille','ValentinesDay','OMEGAOfficialTimekeeper']
-                camp_choice = st.sidebar.selectbox("Select Brand",camp)
-                
-                company = 'omega'
-                campaign = "all"
-                word = word_cloud.query('(company == @company) & (campaign == @camp_choice)')['word'].values[0]
-
-                # generate word cloud
-                wc = WordCloud(background_color="white", max_words=2000, mask=image_mask)
-                wc.generate(word)
-             
-                
-                # plot the word cloud
-                plt.figure(figsize=(8,6), dpi=120)
-                plt.imshow(wc, interpolation='bilinear')
-                plt.axis("off")
-                st.pyplot()
-                
-
-            if brand_choice == 'Rolex':
-            
-                camp = ['all','perpetual','reloxfamily']
-                camp_choice = st.sidebar.selectbox("Select Brand",camp)
-                
-                company = 'rolex'
-                campaign = "all"
-                word = word_cloud.query('(company == @company) & (campaign == @camp_choice)')['word'].values[0]
-
-                # generate word cloud
-                wc = WordCloud(background_color="white", max_words=2000, mask=image_mask)
-                wc.generate(word)
-
-                # plot the word cloud
-                plt.figure(figsize=(8,6), dpi=120)
-                plt.imshow(wc, interpolation='bilinear')
-                plt.axis("off")
-                st.pyplot()
-                
-            if brand_choice == 'Daniel Wellington':
-            
-                camp = ['all','dwgiftsoflove','danielwellington','layzhang']
-                camp_choice = st.sidebar.selectbox("Select Brand",camp)
-                
-                company = 'itisdw'
-                campaign = "all"
-                word = word_cloud.query('(company == @company) & (campaign == @camp_choice)')['word'].values[0]
-
-                # generate word cloud
-                wc = WordCloud(background_color="white", max_words=2000, mask=image_mask)
-                wc.generate(word)
-
-                # plot the word cloud
-                plt.figure(figsize=(8,6), dpi=120)
-                plt.imshow(wc, interpolation='bilinear')
-                plt.axis("off")
-                st.pyplot()  
-
-            if brand_choice == 'SwatchUS':
-            
-                camp = ['all','timeiswhatyoumakeofit','swatchwithlove','swatchmytime']
-                camp_choice = st.sidebar.selectbox("Select Brand",camp)
+            # plot the word cloud
+            plt.figure(figsize=(8,6), dpi=120)
+            plt.imshow(wc, interpolation='bilinear')
+            plt.axis("off")
+            st.pyplot()
                  
-                company = 'swatch'
-                campaign = "all"
-                word = word_cloud.query('(company == @company) & (campaign == @camp_choice)')['word'].values[0]
-
-                # generate word cloud
-                wc = WordCloud(background_color="white", max_words=2000, mask=image_mask)
-                wc.generate(word)
-
-                # plot the word cloud
-                plt.figure(figsize=(8,6), dpi=120)
-                plt.imshow(wc, interpolation='bilinear')
-                plt.axis("off")
-                st.pyplot()    
-                
         if choice == 'Network Graph':
-            
-            st.title("Network Graph")   
-      
-            brand = ["Omega","Rolex","Daniel Wellington", "SwatchUS"]
-            brand_choice = st.sidebar.selectbox("Select Brand",brand)
-            if brand_choice == 'Omega':
-            
-                st.title("Graph Example")
-                config = Config(height=500, width=700, nodeHighlightBehavior=True, highlightColor="#F7A7A6", directed=True,
-                  collapsible=True)
-                if query_type=="Inspirationals":
-                    st.subheader("Inspirationals")
-                    with st.spinner("Loading data"):
-                        store = get_inspired()
-                        st.write(len(store.getNodes()))
-                    st.success("Done")
-                    agraph(list(store.getNodes()), (store.getEdges() ), config)
-                
-            if brand_choice == 'Rolex':
-            
-                company = "rolex"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
         
-            if brand_choice == 'Daniel Wellington':
+            st.title("Network Graph")
+            brand = ["omega","rolex","itisdw","swatch"]
+            brand_choice = st.selectbox("Select Brand", brand)
+
+            st.title("Measurement of Centrality")
+            net_opt = ["degree","betweenness","eigenvector", "closeness"]
+            net_selc = st.selectbox("Select Variable", net_opt)
             
-                company = "itisdw"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
+            net_data = pd.read_csv('table_centrality.csv').query('domain == @brand_choice & variable == @net_selc')
+            st.table(net_data)
             
-            if brand_choice == 'SwatchUS':
+            nodelist = pd.read_csv(brand_choice+'_nodelist.csv')
+            edgelist = pd.read_csv(brand_choice+'_edgelist.csv')
+
+            G = nx.Graph()
+            node_names = list(nodelist['screen_name'])
+
+            edges = []
+            for idx, row in edgelist.iterrows():
+                edges.append(tuple(row))
+
+            G.add_nodes_from(node_names)
+            G.add_edges_from(edges)
+
+            subgraph = sorted(nx.connected_components(G), key=len, reverse=True)[0]
+            subgraph = G.subgraph(subgraph)
+
+            communities = community_louvain.best_partition(G)
+            values = [communities.get(node) for node in G.nodes()]
+            plt.figure(figsize=(20,20))
+            nx.draw_spring(G, cmap=plt.get_cmap('Spectral'), node_color = values, node_size=50, with_labels=False)
             
-                company = "swatch"
-                camp_eng = pd.read_csv('campaign_engagement.csv')
-                camp_eng = camp_eng.query('company == @company')
-                fig = px.bar(camp_eng, x="campaign", y="avg", title="Average Campaign Engagement")
-                st.plotly_chart(fig)
-                
-                fig = px.bar(camp_eng, x="campaign", y="count", title="Total Tweeted Campaign")
-                st.plotly_chart(fig)
-                       
-                fig = px.bar(camp_eng, x="campaign", y="rate", title="Total Campaign Engagement Rate")
-                st.plotly_chart(fig)
+     
+            st.title("Visualization Network Graph")
+            
+            button = st.button("Click to show more details of %s network graph" % brand_choice) 
+            st.write("")
+            
+            G.add_nodes_from(node_names)
+            G.add_edges_from(edges)
+            st.write("Number of nodes: %s" % G.number_of_nodes())
+            st.write("Number of edges: %s" % G.number_of_edges())
+            st.write("Network density: %s" % nx.density(G))
+
+            st.pyplot()
+            
+            nt = Network("800px", "1500px")
+            nt.from_nx(subgraph)
+
+              
+           
+            if button:
+                nt.show("network_graph.html")
     
+                    
 if __name__=='__main__':
     main()
