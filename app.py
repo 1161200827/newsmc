@@ -234,6 +234,8 @@ def main():
             net_data = pd.read_csv('table_centrality.csv').query('domain == @brand_choice & variable == @net_selc')
             st.table(net_data)
             
+            st.title("Visualization Network Graph")
+              
             nodelist = pd.read_csv(brand_choice+'_nodelist.csv')
             edgelist = pd.read_csv(brand_choice+'_edgelist.csv')
 
@@ -256,7 +258,7 @@ def main():
             nx.draw_spring(G, cmap=plt.get_cmap('Spectral'), node_color = values, node_size=50, with_labels=False)
             
      
-            st.title("Visualization Network Graph")
+          
             
             
             G.add_nodes_from(node_names)
